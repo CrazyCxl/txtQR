@@ -1,6 +1,9 @@
 use eframe::egui::{self, Color32, ColorImage, RichText};
 use eframe::{run_native, NativeOptions};
 use qrcode::{types::Color as QrColor, EcLevel, QrCode};
+use rqrr::PreparedImage;
+use arboard::Clipboard;
+use image::DynamicImage;
 
 struct TxtQrApp {
     input_text: String,
@@ -58,6 +61,62 @@ impl TxtQrApp {
         self.current_page = 0;
     }
 
+    fn recognize_qr_from_clipboard(&mut self) {
+        match Clipboard::new() {
+            Ok(mut clipboard) => {
+                match clipboard.get_image() {
+                    Ok(image_data) => {
+                        // 将剪贴板图片数据转换为DynamicImage
+                        let width = image_data.width as u32;
+                        let height = image_data.height as u32;
+                        let rgba_data = image_data.bytes.into_owned();
+
+                        // 创建灰度图像用于二维码识别
+                        let img = match image::RgbaImage::from_raw(width, height, rgba_data) {
+                            Some(rgba_img) => DynamicImage::ImageRgba8(rgba_img).to_luma8(),
+                            None => {
+                                self.last_error = "无法处理剪贴板图片数据".to_string();
+                                return;
+                            }
+                        };
+
+                        // 使用rqrr识别二维码
+                        let mut img = PreparedImage::prepare(img);
+                        let grids = img.detect_grids();
+
+                        if grids.is_empty() {
+                            self.last_error = "剪贴板中未检测到二维码".to_string();
+                            return;
+                        }
+
+                        // 尝试解码第一个检测到的二维码
+                        for grid in grids {
+                            match grid.decode() {
+                                Ok((_metadata, content)) => {
+                                    // content已经是String类型，直接使用
+                                    self.input_text = content;
+                                    self.pages.clear();
+                                    self.current_page = 0;
+                                    self.last_error.clear();
+                                    return;
+                                }
+                                Err(e) => {
+                                    self.last_error = format!("二维码解码失败: {}", e);
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        self.last_error = format!("无法从剪贴板获取图片: {}", e);
+                    }
+                }
+            }
+            Err(e) => {
+                self.last_error = format!("无法访问剪贴板: {}", e);
+            }
+        }
+    }
+
     fn page_text(&self) -> &str {
         if self.pages.is_empty() {
             ""
@@ -73,6 +132,7 @@ impl TxtQrApp {
             return;
         }
 
+        // 使用UTF-8编码生成二维码，避免中文乱码
         match QrCode::with_error_correction_level(text.as_bytes(), EcLevel::M) {
             Ok(code) => {
                 let module_count = code.width();
@@ -144,6 +204,9 @@ impl eframe::App for TxtQrApp {
                     self.pages.clear();
                     self.current_page = 0;
                     self.last_error.clear();
+                }
+                if ui.button("从剪贴板识别二维码").clicked() {
+                    self.recognize_qr_from_clipboard();
                 }
             });
 
