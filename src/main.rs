@@ -177,11 +177,45 @@ impl eframe::App for TxtQrApp {
     }
 }
 
+fn apply_chinese_font(ctx: &egui::Context) {
+    let mut fonts = egui::FontDefinitions::default();
+
+    let chinese_font_candidates = [
+        r"C:\Windows\Fonts\msyh.ttc",
+        r"C:\Windows\Fonts\msyh.ttf",
+        r"C:\Windows\Fonts\simhei.ttf",
+        r"/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+        r"/usr/share/fonts/truetype/arphic/uming.ttc",
+    ];
+
+    for path in chinese_font_candidates.iter() {
+        if let Ok(bytes) = std::fs::read(path) {
+            fonts.font_data.insert("chinese".to_owned(), egui::FontData::from_owned(bytes));
+            let prop = fonts.families.get_mut(&egui::FontFamily::Proportional).unwrap();
+            if !prop.contains(&"chinese".to_owned()) {
+                prop.insert(0, "chinese".to_owned());
+            }
+            let mono = fonts.families.get_mut(&egui::FontFamily::Monospace).unwrap();
+            if !mono.contains(&"chinese".to_owned()) {
+                mono.push("chinese".to_owned());
+            }
+            ctx.set_fonts(fonts);
+            return;
+        }
+    }
+
+    // 没找到系统中文字体则保持默认
+    ctx.set_fonts(fonts);
+}
+
 fn main() {
     let options = NativeOptions::default();
     let _ = run_native(
         "TxtQR 桌面二维码生成器",
         options,
-        Box::new(|_cc| Box::new(TxtQrApp::default())),
+        Box::new(|cc| {
+            apply_chinese_font(&cc.egui_ctx);
+            Box::new(TxtQrApp::default())
+        }),
     );
 }
