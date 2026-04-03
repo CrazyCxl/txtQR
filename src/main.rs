@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 use eframe::egui::{self, Color32, ColorImage};
 use eframe::{run_native, NativeOptions};
 use qrcode::{types::Color as QrColor, EcLevel, QrCode};
