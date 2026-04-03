@@ -119,7 +119,9 @@ impl eframe::App for TxtQrApp {
             ui.separator();
 
             ui.label("1. 输入文本数据：");
-            ui.add(egui::TextEdit::multiline(&mut self.input_text).desired_rows(8));
+            egui::ScrollArea::vertical().max_height(200.0).show(ui, |ui| {
+                ui.add(egui::TextEdit::multiline(&mut self.input_text));
+            });
 
             ui.horizontal(|ui| {
                 ui.label("2. 每个二维码字符上限（chunk，建议 100-1200）：");
