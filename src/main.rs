@@ -175,17 +175,18 @@ impl TxtQrApp {
 impl eframe::App for TxtQrApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            // 设置全局间距
-            ui.spacing_mut().item_spacing = egui::vec2(8.0, 8.0);
-            ui.spacing_mut().button_padding = egui::vec2(12.0, 6.0);
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                // 设置全局间距
+                ui.spacing_mut().item_spacing = egui::vec2(8.0, 8.0);
+                ui.spacing_mut().button_padding = egui::vec2(12.0, 6.0);
 
-            // 标题区域
-            ui.vertical_centered(|ui| {
-                ui.add_space(10.0);
-                ui.heading(egui::RichText::new("📱 TxtQR").size(28.0).color(egui::Color32::from_rgb(63, 81, 181)));
-                ui.label(egui::RichText::new("文本转二维码桌面应用").size(14.0).color(egui::Color32::from_rgb(117, 117, 117)));
-                ui.add_space(5.0);
-            });
+            // // 标题区域
+            // ui.vertical_centered(|ui| {
+            //     ui.add_space(10.0);
+            //     ui.heading(egui::RichText::new("📱 TxtQR").size(28.0).color(egui::Color32::from_rgb(63, 81, 181)));
+            //     ui.label(egui::RichText::new("文本转二维码桌面应用").size(14.0).color(egui::Color32::from_rgb(117, 117, 117)));
+            //     ui.add_space(5.0);
+            // });
 
             ui.separator();
 
@@ -362,6 +363,7 @@ impl eframe::App for TxtQrApp {
                 });
 
             ui.add_space(10.0);
+            });
         });
     }
 }
