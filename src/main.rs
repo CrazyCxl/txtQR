@@ -1,4 +1,4 @@
-use eframe::egui::{self, Color32, ColorImage, RichText};
+use eframe::egui::{self, Color32, ColorImage};
 use eframe::{run_native, NativeOptions};
 use qrcode::{types::Color as QrColor, EcLevel, QrCode};
 use rqrr::PreparedImage;
@@ -175,69 +175,193 @@ impl TxtQrApp {
 impl eframe::App for TxtQrApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("TxtQR - 文本转二维码 (分页支持)");
+            // 设置全局间距
+            ui.spacing_mut().item_spacing = egui::vec2(8.0, 8.0);
+            ui.spacing_mut().button_padding = egui::vec2(12.0, 6.0);
+
+            // 标题区域
+            ui.vertical_centered(|ui| {
+                ui.add_space(10.0);
+                ui.heading(egui::RichText::new("📱 TxtQR").size(28.0).color(egui::Color32::from_rgb(63, 81, 181)));
+                ui.label(egui::RichText::new("文本转二维码桌面应用").size(14.0).color(egui::Color32::from_rgb(117, 117, 117)));
+                ui.add_space(5.0);
+            });
+
             ui.separator();
 
-            ui.label("1. 输入文本数据：");
-            egui::ScrollArea::vertical().max_height(200.0).show(ui, |ui| {
-                ui.add(egui::TextEdit::multiline(&mut self.input_text));
-            });
+            // 输入区域
+            ui.add_space(10.0);
+            ui.label(egui::RichText::new("📝 输入文本数据").size(16.0).color(egui::Color32::from_rgb(33, 33, 33)));
+            egui::Frame::none()
+                .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(200, 200, 200)))
+                .rounding(egui::Rounding::same(4.0))
+                .inner_margin(egui::Margin::same(8.0))
+                .show(ui, |ui| {
+                    egui::ScrollArea::vertical().max_height(180.0).show(ui, |ui| {
+                        ui.add_sized(
+                            [ui.available_width(), 160.0],
+                            egui::TextEdit::multiline(&mut self.input_text)
+                                .hint_text("在此输入要转换为二维码的文本内容...")
+                        );
+                    });
+                });
 
-            ui.horizontal(|ui| {
-                ui.label("2. 每个二维码字符上限（chunk，建议 100-1200）：");
-                ui.add(egui::Slider::new(&mut self.chunk_size_chars, 50..=2000));
-                ui.label(format!("{}", self.chunk_size_chars));
-            });
+            ui.add_space(15.0);
 
-            ui.horizontal(|ui| {
-                ui.label("3. 显示尺寸（像素）：");
-                ui.add(egui::Slider::new(&mut self.image_size_px, 128..=1000));
-                ui.label(format!("{} px", self.image_size_px));
-            });
+            // 配置区域
+            ui.label(egui::RichText::new("⚙️ 配置参数").size(16.0).color(egui::Color32::from_rgb(33, 33, 33)));
+            ui.add_space(8.0);
 
-            ui.horizontal(|ui| {
-                if ui.button("生成二维码并分页").clicked() {
+            egui::Grid::new("config_grid")
+                .num_columns(3)
+                .spacing([20.0, 10.0])
+                .show(ui, |ui| {
+                    // 第一行：字符上限
+                    ui.label(egui::RichText::new("字符上限").size(13.0));
+                    ui.add(egui::Slider::new(&mut self.chunk_size_chars, 50..=2000)
+                        .text("字符"));
+                    ui.label(egui::RichText::new(format!("{}", self.chunk_size_chars))
+                        .size(13.0)
+                        .color(egui::Color32::from_rgb(63, 81, 181)));
+                    ui.end_row();
+
+                    // 第二行：显示尺寸
+                    ui.label(egui::RichText::new("显示尺寸").size(13.0));
+                    ui.add(egui::Slider::new(&mut self.image_size_px, 128..=1000)
+                        .text("像素"));
+                    ui.label(egui::RichText::new(format!("{} px", self.image_size_px))
+                        .size(13.0)
+                        .color(egui::Color32::from_rgb(63, 81, 181)));
+                    ui.end_row();
+                });
+
+            ui.add_space(15.0);
+
+            // 操作按钮区域
+            ui.label(egui::RichText::new("🎯 操作").size(16.0).color(egui::Color32::from_rgb(33, 33, 33)));
+            ui.add_space(8.0);
+
+            ui.horizontal_wrapped(|ui| {
+                let button_height = 32.0;
+
+                if ui.add_sized([120.0, button_height],
+                    egui::Button::new(egui::RichText::new("🚀 生成二维码").size(13.0))
+                        .fill(egui::Color32::from_rgb(76, 175, 80))
+                        .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(56, 142, 60)))
+                ).clicked() {
                     self.rebuild_pages();
                 }
-                if ui.button("清空文本").clicked() {
+
+                if ui.add_sized([100.0, button_height],
+                    egui::Button::new(egui::RichText::new("🗑 清空").size(13.0))
+                        .fill(egui::Color32::from_rgb(244, 67, 54))
+                        .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(211, 47, 47)))
+                ).clicked() {
                     self.input_text.clear();
                     self.pages.clear();
                     self.current_page = 0;
                     self.last_error.clear();
                 }
-                if ui.button("从剪贴板识别二维码").clicked() {
+
+                if ui.add_sized([140.0, button_height],
+                    egui::Button::new(egui::RichText::new("📋 识别剪贴板").size(13.0))
+                        .fill(egui::Color32::from_rgb(255, 152, 0))
+                        .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(245, 127, 23)))
+                ).clicked() {
                     self.recognize_qr_from_clipboard();
                 }
             });
 
+            // 分页控制区域
             if !self.pages.is_empty() {
+                ui.add_space(20.0);
+                ui.label(egui::RichText::new("📄 分页浏览").size(16.0).color(egui::Color32::from_rgb(33, 33, 33)));
+                ui.add_space(8.0);
+
                 ui.horizontal(|ui| {
-                    if ui.button("上一页").clicked() {
+                    ui.add_space(10.0);
+
+                    if ui.add_enabled(self.current_page > 0,
+                        egui::Button::new("⬅️ 上一页").frame(false)
+                    ).clicked() {
                         if self.current_page > 0 {
                             self.current_page -= 1;
                         }
                     }
-                    if ui.button("下一页").clicked() {
+
+                    ui.with_layout(egui::Layout::centered_and_justified(egui::Direction::LeftToRight), |ui| {
+                        ui.label(egui::RichText::new(format!("📄 {}/{} 页", self.current_page + 1, self.pages.len()))
+                            .size(14.0)
+                            .color(egui::Color32::from_rgb(63, 81, 181)));
+                    });
+
+                    if ui.add_enabled(self.current_page + 1 < self.pages.len(),
+                        egui::Button::new("下一页 ➡️").frame(false)
+                    ).clicked() {
                         if self.current_page + 1 < self.pages.len() {
                             self.current_page += 1;
                         }
                     }
-                    ui.label(RichText::new(format!("当前页: {}/{}", self.current_page + 1, self.pages.len())).strong());
+
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.label(egui::RichText::new(format!("📊 {} 字符", self.page_text().chars().count()))
+                            .size(12.0)
+                            .color(egui::Color32::from_rgb(117, 117, 117)));
+                    });
                 });
 
-                ui.separator();
-                ui.label(format!("当前页面字符数: {}", self.page_text().chars().count()));
-                ui.separator();
+                ui.add_space(15.0);
 
-                self.render_qr_image(ui);
+                // 二维码显示区域
+                ui.label(egui::RichText::new("🔲 二维码预览").size(16.0).color(egui::Color32::from_rgb(33, 33, 33)));
+                ui.add_space(8.0);
+
+                egui::Frame::none()
+                    .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(200, 200, 200)))
+                    .rounding(egui::Rounding::same(8.0))
+                    .inner_margin(egui::Margin::same(15.0))
+                    .show(ui, |ui| {
+                        ui.vertical_centered(|ui| {
+                            self.render_qr_image(ui);
+                        });
+                    });
             }
 
+            // 错误信息显示
             if !self.last_error.is_empty() {
-                ui.colored_label(egui::Color32::RED, &self.last_error);
+                ui.add_space(15.0);
+                egui::Frame::none()
+                    .fill(egui::Color32::from_rgb(255, 235, 238))
+                    .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(244, 67, 54)))
+                    .rounding(egui::Rounding::same(4.0))
+                    .inner_margin(egui::Margin::same(10.0))
+                    .show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label(egui::RichText::new("⚠️").size(16.0).color(egui::Color32::from_rgb(244, 67, 54)));
+                            ui.label(egui::RichText::new(&self.last_error)
+                                .size(13.0)
+                                .color(egui::Color32::from_rgb(183, 28, 28)));
+                        });
+                    });
             }
 
+            // 底部提示信息
+            ui.add_space(20.0);
             ui.separator();
-            ui.label("提示：单个 QR 码的最大容量受条码版本和纠错级别影响，如果输入太长无法生成，请适当减小 chunk 大小或增长二维码尺寸。");
+            ui.add_space(8.0);
+
+            egui::Frame::none()
+                .fill(egui::Color32::from_rgb(248, 248, 248))
+                .rounding(egui::Rounding::same(6.0))
+                .inner_margin(egui::Margin::same(12.0))
+                .show(ui, |ui| {
+                    ui.horizontal_wrapped(|ui| {
+                        ui.label(egui::RichText::new("💡 提示：").strong());
+                        ui.label("单个 QR 码的最大容量受条码版本和纠错级别影响，如果输入太长无法生成，请适当减小字符上限或增大显示尺寸。");
+                    });
+                });
+
+            ui.add_space(10.0);
         });
     }
 }
