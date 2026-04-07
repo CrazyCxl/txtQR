@@ -5,8 +5,8 @@ use std::sync::Arc;
 use eframe::egui::{self, Color32, ColorImage, IconData};
 use eframe::{run_native, NativeOptions};
 
-fn load_icon(path: &str) -> Option<IconData> {
-    match image::open(path) {
+fn load_icon_from_bytes(bytes: &[u8]) -> Option<IconData> {
+    match image::load_from_memory(bytes) {
         Ok(img) => {
             let img = img.to_rgba8();
             let (width, height) = img.dimensions();
@@ -419,8 +419,10 @@ fn apply_chinese_font(ctx: &egui::Context) {
     ctx.set_fonts(fonts);
 }
 
+static ICON_DATA: &[u8] = include_bytes!("../resource/txtqr.ico");
+
 fn main() {
-    let icon = load_icon("resource/txtqr.ico");
+    let icon = load_icon_from_bytes(ICON_DATA);
 
     let mut options = NativeOptions::default();
     if let Some(icon_data) = icon {
