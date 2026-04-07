@@ -1,7 +1,25 @@
 #![windows_subsystem = "windows"]
 
-use eframe::egui::{self, Color32, ColorImage};
+use std::sync::Arc;
+
+use eframe::egui::{self, Color32, ColorImage, IconData};
 use eframe::{run_native, NativeOptions};
+
+fn load_icon(path: &str) -> Option<IconData> {
+    match image::open(path) {
+        Ok(img) => {
+            let img = img.to_rgba8();
+            let (width, height) = img.dimensions();
+            let rgba = img.into_raw();
+            Some(IconData {
+                rgba,
+                width: width as u32,
+                height: height as u32,
+            })
+        }
+        Err(_) => None,
+    }
+}
 use qrcode::{types::Color as QrColor, EcLevel, QrCode};
 use rqrr::PreparedImage;
 use arboard::Clipboard;
@@ -212,7 +230,7 @@ impl eframe::App for TxtQrApp {
             ui.add_space(15.0);
 
             // 配置区域
-            ui.label(egui::RichText::new("⚙️ 配置参数").size(16.0).color(egui::Color32::from_rgb(33, 33, 33)));
+            ui.label(egui::RichText::new("配置参数").size(16.0).color(egui::Color32::from_rgb(33, 33, 33)));
             ui.add_space(8.0);
 
             egui::Grid::new("config_grid")
@@ -402,7 +420,13 @@ fn apply_chinese_font(ctx: &egui::Context) {
 }
 
 fn main() {
-    let options = NativeOptions::default();
+    let icon = load_icon("resource/txtqr.ico");
+
+    let mut options = NativeOptions::default();
+    if let Some(icon_data) = icon {
+        options.viewport.icon = Some(Arc::new(icon_data));
+    }
+
     let _ = run_native(
         "TxtQR 桌面二维码生成器",
         options,
