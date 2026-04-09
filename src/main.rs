@@ -239,7 +239,7 @@ impl eframe::App for TxtQrApp {
                 .show(ui, |ui| {
                     // 第一行：字符上限
                     ui.label(egui::RichText::new("字符上限").size(13.0));
-                    ui.add(egui::Slider::new(&mut self.chunk_size_chars, 50..=2000)
+                    ui.add(egui::Slider::new(&mut self.chunk_size_chars, 50..=4000)
                         .text("字符"));
                     ui.label(egui::RichText::new(format!("{}", self.chunk_size_chars))
                         .size(13.0)
