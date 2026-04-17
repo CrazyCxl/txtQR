@@ -302,32 +302,37 @@ impl eframe::App for TxtQrApp {
                 ui.horizontal(|ui| {
                     ui.add_space(10.0);
 
-                    if ui.add_enabled(self.current_page > 0,
-                        egui::Button::new("⬅️ 上一页").frame(false)
-                    ).clicked() {
+                    // 1. 左侧按钮
+                    if ui.add_enabled(self.current_page > 0, egui::Button::new("上一页")).clicked() {
                         if self.current_page > 0 {
                             self.current_page -= 1;
                         }
                     }
 
+                    // 2. 居中的页码（这个块需要自动扩展占据中间剩余空间）
                     ui.with_layout(egui::Layout::centered_and_justified(egui::Direction::LeftToRight), |ui| {
-                        ui.label(egui::RichText::new(format!("📄 {}/{} 页", self.current_page + 1, self.pages.len()))
-                            .size(14.0)
-                            .color(egui::Color32::from_rgb(63, 81, 181)));
+                        ui.label(
+                            egui::RichText::new(format!("📄 {}/{} 页", self.current_page + 1, self.pages.len()))
+                                .size(14.0)
+                                .color(egui::Color32::from_rgb(63, 81, 181))
+                        );
                     });
 
-                    if ui.add_enabled(self.current_page + 1 < self.pages.len(),
-                        egui::Button::new("下一页 ➡️").frame(false)
-                    ).clicked() {
-                        if self.current_page + 1 < self.pages.len() {
-                            self.current_page += 1;
-                        }
-                    }
-
+                    // 3. 右侧区域：将“下一页”和“字符计数”放在同一个右对齐容器里
+                    //    这样它们作为一个整体靠右，内部保持自然流式布局。
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.label(egui::RichText::new(format!("📊 {} 字符", self.page_text().chars().count()))
-                            .size(12.0)
-                            .color(egui::Color32::from_rgb(117, 117, 117)));
+                        // 先放字符计数（因为 right_to_left 会反向排列，为了让它在按钮右侧，需要按反向顺序添加）
+                        ui.label(
+                            egui::RichText::new(format!("📊 {} 字符", self.page_text().chars().count()))
+                                .size(12.0)
+                                .color(egui::Color32::from_rgb(117, 117, 117))
+                        );
+                        // 再放“下一页”按钮
+                        if ui.add_enabled(self.current_page + 1 < self.pages.len(), egui::Button::new("下一页")).clicked() {
+                            if self.current_page + 1 < self.pages.len() {
+                                self.current_page += 1;
+                            }
+                        }
                     });
                 });
 
