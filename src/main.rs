@@ -21,9 +21,9 @@ fn load_icon_from_bytes(bytes: &[u8]) -> Option<IconData> {
     }
 }
 use qrcode::{types::Color as QrColor, EcLevel, QrCode};
-use rqrr::PreparedImage;
 use arboard::Clipboard;
 use image::DynamicImage;
+use rxing::{MultiFormatReader, BufferedImageLuminanceSource, Reader, common::HybridBinarizer, BinaryBitmap};
 
 struct TxtQrApp {
     input_text: String,
@@ -100,29 +100,22 @@ impl TxtQrApp {
                             }
                         };
 
-                        // 使用rqrr识别二维码
-                        let mut img = PreparedImage::prepare(img);
-                        let grids = img.detect_grids();
+                        // 使用rxing识别二维码
+                        let luminance = BufferedImageLuminanceSource::new(DynamicImage::ImageLuma8(img));
+                        let binarizer = HybridBinarizer::new(luminance);
+                        let mut bitmap = BinaryBitmap::new(binarizer);
 
-                        if grids.is_empty() {
-                            self.last_error = "剪贴板中未检测到二维码".to_string();
-                            return;
-                        }
+                        let mut reader = MultiFormatReader::default();
 
-                        // 尝试解码第一个检测到的二维码
-                        for grid in grids {
-                            match grid.decode() {
-                                Ok((_metadata, content)) => {
-                                    // content已经是String类型，直接使用
-                                    self.input_text = content;
-                                    self.pages.clear();
-                                    self.current_page = 0;
-                                    self.last_error.clear();
-                                    return;
-                                }
-                                Err(e) => {
-                                    self.last_error = format!("二维码解码失败: {}", e);
-                                }
+                        match reader.decode(&mut bitmap) {
+                            Ok(result) => {
+                                self.input_text = result.getText().to_string();
+                                self.pages.clear();
+                                self.current_page = 0;
+                                self.last_error.clear();
+                            }
+                            Err(e) => {
+                                self.last_error = format!("二维码解码失败: {}", e);
                             }
                         }
                     }
