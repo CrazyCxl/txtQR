@@ -20,7 +20,7 @@ fn load_icon_from_bytes(bytes: &[u8]) -> Option<IconData> {
         Err(_) => None,
     }
 }
-use qrcode::{types::Color as QrColor, EcLevel, QrCode};
+use qr_code::{QrCode, EcLevel, types::Color};
 use arboard::Clipboard;
 use image::DynamicImage;
 use rxing::{MultiFormatReader, BufferedImageLuminanceSource, Reader, common::HybridBinarizer, BinaryBitmap};
@@ -59,16 +59,21 @@ impl TxtQrApp {
 
         let chunk_size = self.chunk_size_chars.max(1);
         let mut current = String::new();
-        let mut count = 0;
+        let mut current_bytes = 0;
 
         for c in text.chars() {
-            current.push(c);
-            count += 1;
-            if count >= chunk_size {
-                self.pages.push(current);
-                current = String::new();
-                count = 0;
+            let mut buf = [0u8; 4];
+            let c_utf8 = c.encode_utf8(&mut buf);
+            let c_len = c_utf8.len();
+            if current_bytes + c_len > chunk_size {
+                if !current.is_empty() {
+                    self.pages.push(current.clone());
+                    current.clear();
+                    current_bytes = 0;
+                }
             }
+            current.push(c);
+            current_bytes += c_len;
         }
         if !current.is_empty() {
             self.pages.push(current);
@@ -145,8 +150,9 @@ impl TxtQrApp {
             return;
         }
 
-        // 使用UTF-8编码生成二维码，避免中文乱码
-        match QrCode::with_error_correction_level(text.as_bytes(), EcLevel::M) {
+        // 使用qr_code 2.0.0，自动处理ECI，直接用with_bytes
+        let bytes = text.as_bytes();
+        match QrCode::with_error_correction_level(bytes, EcLevel::M) {
             Ok(code) => {
                 let module_count = code.width();
                 let pixels_per_module = (self.image_size_px.max(64) as u32 + module_count as u32 - 1) / module_count as u32;
@@ -156,7 +162,7 @@ impl TxtQrApp {
 
                 for y in 0..module_count {
                     for x in 0..module_count {
-                        let dark = code[(x, y)] == QrColor::Dark;
+                        let dark = code[(x, y)] == Color::Dark;
                         let color = if dark { Color32::BLACK } else { Color32::WHITE };
                         let start_x = x as u32 * pixels_per_module;
                         let start_y = y as u32 * pixels_per_module;
@@ -178,7 +184,7 @@ impl TxtQrApp {
                 ui.label(format!("总页面: {}  当前: {}", self.pages.len(), self.current_page + 1));
             }
             Err(e) => {
-                self.last_error = format!("二维码生成失败：{} (当前内容长度={}，建议减小 chunk 大小)", e, text.len());
+                self.last_error = format!("二维码生成失败：{:?} (当前内容长度={}，建议减小 chunk 大小)", e, text.len());
                 ui.colored_label(egui::Color32::RED, &self.last_error);
             }
         }
@@ -232,7 +238,7 @@ impl eframe::App for TxtQrApp {
                 .show(ui, |ui| {
                     // 第一行：字符上限
                     ui.label(egui::RichText::new("字符上限").size(13.0));
-                    ui.add(egui::Slider::new(&mut self.chunk_size_chars, 50..=4000)
+                    ui.add(egui::Slider::new(&mut self.chunk_size_chars, 50..=3000)
                         .text("字符"));
                     ui.label(egui::RichText::new(format!("{}", self.chunk_size_chars))
                         .size(13.0)
